@@ -1,0 +1,58 @@
+{
+  "mappings": {
+    "properties": {
+      "timestamp": {
+        "type": "date",
+        "format": "strict_date_time"
+      },
+      "traceId": {
+        "type": "keyword"
+      },
+      "requestId": {
+        "type": "keyword"
+      },
+      "tenantId": {
+        "type": "keyword"
+      },
+      "appId": {
+        "type": "keyword"
+      },
+      "userId": {
+        "type": "keyword"
+      },
+      "model": {
+        "type": "keyword"
+      },
+      "provider": {
+        "type": "keyword"
+      },
+      "promptTokens": {
+        "type": "integer"
+      },
+      "completionTokens": {
+        "type": "integer"
+      },
+      "totalTokens": {
+        "type": "integer"
+      },
+      "cacheCreationTokens": {
+        "type": "integer"
+      },
+      "cacheReadTokens": {
+        "type": "integer"
+      },
+      "status": {
+        "type": "keyword"
+      },
+      "latencyMs": {
+        "type": "long"
+      },
+      "ttftMs": {
+        "type": "long"
+      },
+      "tpotMs": {
+        "type": "long"
+      }
+    }
+  }
+}

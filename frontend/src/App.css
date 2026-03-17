@@ -1,0 +1,64 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB',
+    'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background: #f0f2f5;
+  color: #333;
+}
+
+:root {
+  --ag-text: #1f2329;
+  --ag-text-secondary: rgba(31, 35, 41, 0.65);
+  --ag-bg: #f0f2f5;
+  --ag-card-bg: #ffffff;
+  --ag-border: rgba(5, 5, 5, 0.06);
+  --ag-radius: 12px;
+}
+
+.page-container {
+  padding: 24px;
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.page-header h2 {
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 650;
+  color: var(--ag-text);
+  margin: 0;
+}
+
+.page-header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 统一页面标题（不依赖每个页面单独写 CSS） */
+.app-content h2 {
+  font-size: 18px;
+  line-height: 26px;
+  font-weight: 650;
+  color: var(--ag-text);
+}
+
+/* AntD Table：表头标题居中，正文保持各列自定义 align */
+.ant-table-thead > tr > th {
+  text-align: center;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.88);
+}
+
+.ant-table-tbody > tr > td {
+  vertical-align: middle;
+}

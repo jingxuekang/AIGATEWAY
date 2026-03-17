@@ -1,0 +1,64 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # Gateway Admin logs
+  - job_name: gateway-admin
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: gateway-admin
+          service: ai-gateway
+          component: admin
+          __path__: /var/log/aigateway/gateway-admin*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \[(?P<thread>.*?)\] \[(?P<trace_id>.*?)\] (?P<level>\w+)\s+(?P<logger>[\w\.]+) - (?P<message>.*)'
+      - labels:
+          level:
+          thread:
+          trace_id:
+          logger:
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05'
+
+  # Gateway Core logs
+  - job_name: gateway-core
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: gateway-core
+          service: ai-gateway
+          component: core
+          __path__: /var/log/aigateway/gateway-core*.log
+    pipeline_stages:
+      - regex:
+          expression: '^(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}) \[(?P<thread>.*?)\] \[(?P<trace_id>.*?)\] (?P<level>\w+)\s+(?P<logger>[\w\.]+) - (?P<message>.*)'
+      - labels:
+          level:
+          thread:
+          trace_id:
+          logger:
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02 15:04:05'
+
+  # All AI Gateway logs (fallback)
+  - job_name: aigateway-all
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: aigateway
+          service: ai-gateway
+          __path__: /var/log/aigateway/*.log

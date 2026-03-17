@@ -1,0 +1,106 @@
+# AI Provider 配置示例
+# 复制此文件为 application-providers.yml 并填入真实的 API Keys
+
+provider:
+  # OpenAI 配置
+  openai:
+    api-url: https://api.openai.com/v1
+    api-key: sk-your-openai-api-key-here
+    organization: org-your-organization-id  # 可选
+    timeout: 60000  # 超时时间（毫秒）
+    
+  # Anthropic Claude 配置
+  anthropic:
+    api-url: https://api.anthropic.com/v1
+    api-key: sk-ant-your-anthropic-api-key-here
+    version: 2023-06-01
+    timeout: 60000
+    
+  # 火山方舟（字节跳动）配置
+  volcano:
+    api-url: https://ark.cn-beijing.volces.com/api/v3
+    api-key: your-volcano-api-key-here
+    timeout: 60000
+    
+  # Azure OpenAI 配置（可选）
+  azure:
+    api-url: https://your-resource.openai.azure.com
+    api-key: your-azure-api-key-here
+    api-version: 2023-05-15
+    deployment-name: your-deployment-name
+    timeout: 60000
+    
+  # 自定义 Provider 配置（可选）
+  custom:
+    api-url: https://your-custom-api.com/v1
+    api-key: your-custom-api-key-here
+    timeout: 60000
+
+# 模型路由配置
+model:
+  routing:
+    # 模型别名映射
+    aliases:
+      gpt4: gpt-4
+      gpt35: gpt-3.5-turbo
+      claude: claude-3-opus-20240229
+      doubao: doubao-pro-32k
+      
+    # 默认模型
+    default: gpt-3.5-turbo
+    
+    # 模型降级策略（当主模型不可用时）
+    fallback:
+      gpt-4: gpt-3.5-turbo
+      claude-3-opus: claude-3-sonnet
+      doubao-pro-32k: doubao-lite-32k
+
+# 限流配置
+rate-limit:
+  enabled: true
+  # 每个 API Key 的限流配置
+  per-key:
+    requests-per-minute: 60
+    tokens-per-minute: 100000
+  # 全局限流配置
+  global:
+    requests-per-minute: 1000
+    tokens-per-minute: 1000000
+
+# 缓存配置
+cache:
+  enabled: true
+  # Redis 配置
+  redis:
+    host: localhost
+    port: 6379
+    password: 
+    database: 0
+    timeout: 3000
+  # API Key 缓存时间（秒）
+  api-key-ttl: 300
+  # 模型信息缓存时间（秒）
+  model-info-ttl: 3600
+
+# 日志配置
+logging:
+  # 是否记录请求详情
+  log-request: true
+  # 是否记录响应详情
+  log-response: true
+  # 是否记录到 Elasticsearch
+  elasticsearch:
+    enabled: false
+    hosts: localhost:9200
+    index-prefix: ai-gateway-logs
+    
+# 监控配置
+monitoring:
+  # Prometheus 指标
+  prometheus:
+    enabled: true
+    path: /actuator/prometheus
+  # 健康检查
+  health:
+    enabled: true
+    path: /actuator/health

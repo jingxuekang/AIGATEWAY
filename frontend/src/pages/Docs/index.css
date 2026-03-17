@@ -1,0 +1,11 @@
+.docs {
+  padding: 24px;
+}
+
+.docs h2 {
+  margin-bottom: 24px;
+}
+
+.docs pre {
+  overflow-x: auto;
+}

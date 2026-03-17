@@ -1,0 +1,159 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "总调用数",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 0 },
+      "datasource": { "type": "elasticsearch", "uid": "ffg8whlt2tn28f" },
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [ { "id": "1", "type": "count" } ],
+          "query": "",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] } }
+      },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "textMode": "auto", "reduceOptions": { "values": false, "calcs": [ "lastNotNull" ] } }
+    },
+    {
+      "type": "stat",
+      "title": "成功调用",
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 0 },
+      "datasource": { "type": "elasticsearch", "uid": "ffg8whlt2tn28f" },
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [ { "id": "1", "type": "count" } ],
+          "query": "status:success",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] } }
+      },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "textMode": "auto", "reduceOptions": { "values": false, "calcs": [ "lastNotNull" ] } }
+    },
+    {
+      "type": "stat",
+      "title": "失败调用",
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 0 },
+      "datasource": { "type": "elasticsearch", "uid": "ffg8whlt2tn28f" },
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [ { "id": "1", "type": "count" } ],
+          "query": "status:error OR status:failed",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null } ] } }
+      },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "textMode": "auto", "reduceOptions": { "values": false, "calcs": [ "lastNotNull" ] } }
+    },
+    {
+      "type": "stat",
+      "title": "平均延迟 (ms)",
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 0 },
+      "datasource": { "type": "elasticsearch", "uid": "ffg8whlt2tn28f" },
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [ { "field": "latency_ms", "id": "1", "type": "avg" } ],
+          "query": "",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null }, { "color": "yellow", "value": 1000 }, { "color": "red", "value": 3000 } ] } }
+      },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "textMode": "auto", "reduceOptions": { "values": false, "calcs": [ "lastNotNull" ] } }
+    },
+    {
+      "type": "stat",
+      "title": "总 Token 消耗",
+      "gridPos": { "h": 8, "w": 6, "x": 0, "y": 8 },
+      "datasource": { "type": "elasticsearch", "uid": "ffg8whlt2tn28f" },
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [ { "field": "total_tokens", "id": "1", "type": "sum" } ],
+          "query": "",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "blue", "value": null } ] } }
+      },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "textMode": "auto", "reduceOptions": { "values": false, "calcs": [ "lastNotNull" ] } }
+    },
+    {
+      "type": "stat",
+      "title": "平均 TTFT (ms)",
+      "gridPos": { "h": 8, "w": 6, "x": 6, "y": 8 },
+      "datasource": { "type": "elasticsearch", "uid": "ffg8whlt2tn28f" },
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [ { "field": "ttft_ms", "id": "1", "type": "avg" } ],
+          "query": "",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [ { "color": "green", "value": null } ] } }
+      },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "orientation": "auto", "textMode": "auto", "reduceOptions": { "values": false, "calcs": [ "lastNotNull" ] } }
+    },
+    {
+      "type": "table",
+      "title": "调用日志明细",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 16 },
+      "datasource": { "type": "elasticsearch", "uid": "ffg8whlt2tn28f" },
+      "targets": [
+        {
+          "bucketAggs": [],
+          "metrics": [ { "id": "1", "settings": { "size": "100" }, "type": "raw_data" } ],
+          "query": "",
+          "refId": "A",
+          "timeField": "timestamp"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "auto" } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "timestamp" }, "properties": [ { "id": "custom.width", "value": 160 } ] },
+          { "matcher": { "id": "byName", "options": "model" }, "properties": [ { "id": "custom.width", "value": 120 } ] },
+          { "matcher": { "id": "byName", "options": "status" }, "properties": [ { "id": "custom.width", "value": 80 } ] },
+          { "matcher": { "id": "byName", "options": "latency_ms" }, "properties": [ { "id": "custom.width", "value": 100 } ] },
+          { "matcher": { "id": "byName", "options": "total_tokens" }, "properties": [ { "id": "custom.width", "value": 100 } ] }
+        ]
+      },
+      "options": { "sortBy": [ { "desc": true, "displayName": "timestamp" } ] }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 38,
+  "tags": ["llm", "elasticsearch"],
+  "templating": { "list": [] },
+  "time": { "from": "now-6h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "AI Gateway - 日志分析（简化版）",
+  "uid": "aigateway-logs-simple",
+  "version": 1
+}

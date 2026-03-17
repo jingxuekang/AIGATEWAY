@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.aigateway</groupId>
+        <artifactId>ai-model-gateway</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>gateway-provider</artifactId>
+    <name>Gateway Provider</name>
+    <description>Model provider adapters</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.aigateway</groupId>
+            <artifactId>gateway-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- Provider 是适配层库：仅需要 WebClient（不应引入任何 Web Server Starter） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webflux</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.projectreactor.netty</groupId>
+            <artifactId>reactor-netty-http</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+</project>
