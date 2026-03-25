@@ -153,35 +153,57 @@ public abstract class AbstractOpenAiCompatibleProvider implements ModelProvider 
      */
     protected ChatResponse convertVolcanoResponsesFormat(String rawJson) throws Exception {
         com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(rawJson);
-        
+
         ChatResponse response = new ChatResponse();
         response.setId(root.path("id").asText());
         response.setModel(root.path("model").asText());
         response.setObject("chat.completion");
-        
-        // 提取文本内容
-        String text = root.path("output").path("text").asText("");
-        
+
+        // 火山引擎 Responses API output 是数组，遍历找 message 类型
+        StringBuilder textBuilder = new StringBuilder();
+        com.fasterxml.jackson.databind.JsonNode output = root.path("output");
+        if (output.isArray()) {
+            for (com.fasterxml.jackson.databind.JsonNode item : output) {
+                String type = item.path("type").asText("");
+                if ("message".equals(type)) {
+                    // message 类型：content 是数组
+                    com.fasterxml.jackson.databind.JsonNode contentArr = item.path("content");
+                    if (contentArr.isArray()) {
+                        for (com.fasterxml.jackson.databind.JsonNode c : contentArr) {
+                            if ("output_text".equals(c.path("type").asText())) {
+                                textBuilder.append(c.path("text").asText(""));
+                            }
+                        }
+                    }
+                } else if ("reasoning".equals(type)) {
+                    // reasoning 类型：跳过，不展示推理内容
+                }
+            }
+        } else {
+            // 兜底：尝试 output.text
+            textBuilder.append(root.path("output").path("text").asText(""));
+        }
+
         ChatResponse.Message msg = new ChatResponse.Message();
         msg.setRole("assistant");
-        msg.setContent(text);
-        
+        msg.setContent(textBuilder.toString());
+
         ChatResponse.Choice choice = new ChatResponse.Choice();
         choice.setIndex(0);
         choice.setMessage(msg);
-        choice.setFinishReason(root.path("finish_reason").asText("stop"));
+        choice.setFinishReason(root.path("incomplete_details").isMissingNode() ? "stop" : "length");
         response.setChoices(java.util.List.of(choice));
-        
+
         // 用量信息
         com.fasterxml.jackson.databind.JsonNode usage = root.path("usage");
         if (!usage.isMissingNode()) {
             ChatResponse.Usage u = new ChatResponse.Usage();
-            u.setPromptTokens(usage.path("prompt_tokens").asInt(0));
-            u.setCompletionTokens(usage.path("completion_tokens").asInt(0));
+            u.setPromptTokens(usage.path("input_tokens").asInt(usage.path("prompt_tokens").asInt(0)));
+            u.setCompletionTokens(usage.path("output_tokens").asInt(usage.path("completion_tokens").asInt(0)));
             u.setTotalTokens(u.getPromptTokens() + u.getCompletionTokens());
             response.setUsage(u);
         }
-        
+
         return response;
     }
 

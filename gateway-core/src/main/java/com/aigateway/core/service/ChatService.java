@@ -209,6 +209,12 @@ public class ChatService {
         long startTime = System.currentTimeMillis();
         String requestId = UUID.randomUUID().toString();
 
+        // 打印请求体用于调试
+        try {
+            String reqJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(request);
+            log.debug("[chatMultiModal] request={}", reqJson);
+        } catch (Exception ignored) {}
+
         String apiKeyId = getApiKeyId();
         budgetGuardService.checkBudget(apiKeyId, request.getModel());
 
