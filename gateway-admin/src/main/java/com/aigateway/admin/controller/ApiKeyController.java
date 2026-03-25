@@ -233,17 +233,28 @@ public class ApiKeyController {
             throw new BusinessException(400, "model and messages are required");
         assertModelAllowedForKey(key, model);
         try {
-            boolean isVolcanoMultiModal = model != null && (
-                    model.startsWith("doubao-") ||
-                            model.startsWith("ep-") ||
-                            model.startsWith("volcano-")
-            );
-            // 对于豆包/火山多模态，走 gateway-core 的 /v1/responses（避免 prompt-guard/缓存等流程）
-            String uri = isVolcanoMultiModal ? "/v1/responses" : "/v1/chat/completions";
+            // 仅当 messages 中包含图片时才走 /v1/responses，否则走普通 /v1/chat/completions
+            boolean hasImage = false;
+            if (messages instanceof java.util.List<?> msgList) {
+                outer:
+                for (Object msgObj : msgList) {
+                    if (msgObj instanceof java.util.Map<?, ?> msgMap) {
+                        Object content = msgMap.get("content");
+                        if (content instanceof java.util.List<?> parts) {
+                            for (Object part : parts) {
+                                if (part instanceof java.util.Map<?, ?> partMap
+                                        && "image_url".equals(partMap.get("type"))) {
+                                    hasImage = true;
+                                    break outer;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            String uri = hasImage ? "/v1/responses" : "/v1/chat/completions";
             String reqBody = new com.fasterxml.jackson.databind.ObjectMapper()
-                    .writeValueAsString(isVolcanoMultiModal
-                            ? Map.of("model", model, "messages", messages)
-                            : Map.of("model", model, "messages", messages));
+                    .writeValueAsString(Map.of("model", model, "messages", messages));
             String resp = WebClient.builder()
                     .baseUrl(gatewayBaseUrl)
                     .defaultHeader("Authorization", "Bearer " + key.getKeyValue())
