@@ -89,7 +89,24 @@ public class PromptGuardService {
 
         for (ChatRequest.Message msg : request.getMessages()) {
             if (msg.getContent() == null) continue;
-            String contentStr = msg.getContentAsString();
+
+            // 多模态内容只统计文本部分长度，不统计 base64 图片数据
+            String contentStr;
+            if (msg.getContent() instanceof java.util.List<?> parts) {
+                StringBuilder sb = new StringBuilder();
+                for (Object part : parts) {
+                    if (part instanceof java.util.Map<?, ?> partMap) {
+                        String type = String.valueOf(partMap.get("type"));
+                        if ("text".equals(type) || "input_text".equals(type)) {
+                            Object text = partMap.get("text");
+                            if (text != null) sb.append(text);
+                        }
+                    }
+                }
+                contentStr = sb.toString();
+            } else {
+                contentStr = msg.getContentAsString();
+            }
             if (contentStr == null) continue;
 
             if (contentStr.length() > maxMessageLength) {
