@@ -1,8 +1,5 @@
 package com.aigateway.provider.adapter;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.web.reactive.function.client.WebClient;
-
 import java.util.Map;
 
 /**
@@ -11,16 +8,15 @@ import java.util.Map;
  * DeepSeek、OpenAI、Qwen（阿里）、Moonshot（Kimi）、GLM（智谱）、
  * MiniMax、Baichuan、HunYuan、Yi（零一万物）、Volcano（豆包）等。
  *
- * 直接复用抽象基类全部逻辑，无需额外重写。
+ * 完全复用抽象基类逻辑，无需任何重写。
+ * Spring AI OpenAiChatModel 直接处理 OpenAI 兼容协议的请求/响应。
  */
 public class OpenAiCompatibleChannelProvider extends AbstractOpenAiCompatibleProvider {
 
     private final long channelId;
 
-    public OpenAiCompatibleChannelProvider(Map<String, Object> channelData,
-                                           ObjectMapper objectMapper,
-                                           WebClient.Builder webClientBuilder) {
-        super(channelData, objectMapper, webClientBuilder);
+    public OpenAiCompatibleChannelProvider(Map<String, Object> channelData) {
+        super(channelData);
         this.channelId = toLong(channelData.get("id"));
     }
 

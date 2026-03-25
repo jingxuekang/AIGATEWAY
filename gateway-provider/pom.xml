@@ -13,7 +13,7 @@
 
     <artifactId>gateway-provider</artifactId>
     <name>Gateway Provider</name>
-    <description>Model provider adapters - dynamic channel routing via WebClient</description>
+    <description>Model provider adapters - Spring AI based multi-protocol channel routing</description>
 
     <dependencies>
         <dependency>
@@ -28,10 +28,16 @@
             <artifactId>reactor-core</artifactId>
         </dependency>
 
-        <!-- WebFlux: WebClient 支持（DynamicChannelProvider 调用上游） -->
+        <!-- Spring AI: OpenAI 兼容协议（覆盖 DeepSeek/Qwen/Moonshot/GLM/Volcano 等） -->
         <dependency>
-            <groupId>org.springframework</groupId>
-            <artifactId>spring-webflux</artifactId>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-openai</artifactId>
+        </dependency>
+
+        <!-- Spring AI: Anthropic Claude 原生协议 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-anthropic</artifactId>
         </dependency>
 
         <dependency>

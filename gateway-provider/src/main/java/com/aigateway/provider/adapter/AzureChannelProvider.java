@@ -1,30 +1,65 @@
 package com.aigateway.provider.adapter;
 
-import com.aigateway.provider.model.ChatRequest;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.ai.chat.model.ChatModel;
+import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import java.util.Map;
 
 /**
- * Azure OpenAI Service Provider
+ * Azure OpenAI Service Provider（Spring AI 版本）
  *
- * 与 OpenAI 兼容协议的差异：
- *  1. 认证 header 使用 "api-key" 而非 "Authorization: Bearer ..."
- *  2. URI 携带 api-version query 参数
- *  3. model 字段对应 Azure 的 deployment name
+ * Azure 与标准 OpenAI 的差异：
+ *  1. 认证 header："api-key: xxx"（非 "Authorization: Bearer xxx"）
+ *  2. URI 携带 api-version 参数
+ *
+ * 实现方案：使用 Spring AI OpenAiChatModel，通过自定义 RestClient
+ * 注入 "api-key" header，复用 OpenAI 兼容协议的全部逻辑。
  */
 public class AzureChannelProvider extends AbstractOpenAiCompatibleProvider {
 
-    private static final String API_VERSION = "2025-01-01-preview";
-
     private final long channelId;
 
-    public AzureChannelProvider(Map<String, Object> channelData,
-                                ObjectMapper objectMapper,
-                                WebClient.Builder webClientBuilder) {
-        super(channelData, objectMapper, webClientBuilder);
+    public AzureChannelProvider(Map<String, Object> channelData) {
+        super(channelData);
         this.channelId = toLong(channelData.get("id"));
+    }
+
+    /**
+     * 重写 buildChatModel()：
+     * 通过自定义 RestClient 注入 Azure 专用的 "api-key" header，
+     * 替换标准 OpenAI 的 "Authorization: Bearer" 认证方式。
+     * api-version 通过 baseUrl 拼接传入（由 channel 配置的 baseUrl 包含）。
+     */
+    @Override
+    protected ChatModel buildChatModel() {
+        // 构建携带 Azure api-key header 的 RestClient
+        RestClient.Builder restClientBuilder = RestClient.builder()
+                .baseUrl(this.baseUrl)
+                .defaultHeader("api-key", this.apiKey)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+
+        // 构建携带 Azure api-key header 的 WebClient（用于流式）
+        WebClient.Builder webClientBuilder = WebClient.builder()
+                .baseUrl(this.baseUrl)
+                .defaultHeader("api-key", this.apiKey)
+                .defaultHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+
+        OpenAiApi openAiApi = OpenAiApi.builder()
+                .baseUrl(this.baseUrl)
+                .apiKey("placeholder")          // Azure 用 api-key header，此处占位
+                .restClientBuilder(restClientBuilder)
+                .webClientBuilder(webClientBuilder)
+                .build();
+
+        return OpenAiChatModel.builder()
+                .openAiApi(openAiApi)
+                .defaultOptions(OpenAiChatOptions.builder().build())
+                .build();
     }
 
     @Override
@@ -37,29 +72,8 @@ public class AzureChannelProvider extends AbstractOpenAiCompatibleProvider {
         return channelId;
     }
 
-    /**
-     * Azure 使用 "api-key" header 认证，不使用 Bearer token。
-     */
-    @Override
-    protected WebClient buildWebClient(WebClient.Builder builder) {
-        return builder.clone()
-                .baseUrl(this.baseUrl)
-                .defaultHeader("Content-Type", "application/json")
-                .defaultHeader("api-key", this.apiKey)   // Azure 专用 header
-                .build();
-    }
-
-    /**
-     * Azure 的 Chat Completions 需要携带 api-version query 参数。
-     */
-    @Override
-    protected String getChatUri(ChatRequest request) {
-        return "/chat/completions?api-version=" + API_VERSION;
-    }
-
     @Override
     protected boolean matchByProvider(String model) {
-        // Azure deployment name 通常以 azure- 或 gpt- 开头
         return model.startsWith("azure-") || model.startsWith("gpt-");
     }
 }
