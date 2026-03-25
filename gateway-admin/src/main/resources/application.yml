@@ -98,6 +98,8 @@ management:
 
 # Logging
 logging:
+  file:
+    path: logs
   level:
     com.aigateway: DEBUG
     org.springframework: INFO
