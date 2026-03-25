@@ -49,9 +49,30 @@ public abstract class AbstractOpenAiCompatibleProvider implements ModelProvider 
     // 钩子方法（子类可重写）
     // -------------------------------------------------------------------------
 
-    /** 同步调用的 URI，默认 /chat/completions */
+    /** 同步调用的 URI，根据请求内容自动判断端点 */
     protected String getChatUri(ChatRequest request) {
+        // 火山引擎多模态请求（messages 中含 image_url）走 /responses 端点
+        if (isMultiModal(request) && "volcano".equalsIgnoreCase(this.provider)) {
+            return "/responses";
+        }
         return "/chat/completions";
+    }
+
+    /** 检测请求是否包含多模态内容（image_url） */
+    protected boolean isMultiModal(ChatRequest request) {
+        if (request.getMessages() == null) return false;
+        for (ChatRequest.Message msg : request.getMessages()) {
+            Object content = msg.getContent();
+            if (content instanceof java.util.List<?> list) {
+                for (Object item : list) {
+                    if (item instanceof java.util.Map<?, ?> map
+                            && "image_url".equals(map.get("type"))) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
     }
 
     /** 流式调用的 URI，默认同 getChatUri */
@@ -112,11 +133,56 @@ public abstract class AbstractOpenAiCompatibleProvider implements ModelProvider 
                     .bodyToMono(String.class)
                     .timeout(Duration.ofMillis(timeout))
                     .block();
+            
+            // 火山引擎 /responses 端点返回格式不同，需要转换
+            if ("/responses".equals(uri)) {
+                return convertVolcanoResponsesFormat(resp);
+            }
+            
             return objectMapper.readValue(resp, ChatResponse.class);
         } catch (Exception e) {
             logHttpError(uri, e);
             throw new ProviderException("Channel[" + channelName + "] call failed: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * 火山引擎 Responses API 返回格式转换为标准 ChatResponse
+     * Responses API 返回: { "output": { "text": "..." }, "usage": {...} }
+     * 标准格式:          { "choices": [{ "message": { "content": "..." } }], "usage": {...} }
+     */
+    protected ChatResponse convertVolcanoResponsesFormat(String rawJson) throws Exception {
+        com.fasterxml.jackson.databind.JsonNode root = objectMapper.readTree(rawJson);
+        
+        ChatResponse response = new ChatResponse();
+        response.setId(root.path("id").asText());
+        response.setModel(root.path("model").asText());
+        response.setObject("chat.completion");
+        
+        // 提取文本内容
+        String text = root.path("output").path("text").asText("");
+        
+        ChatResponse.Message msg = new ChatResponse.Message();
+        msg.setRole("assistant");
+        msg.setContent(text);
+        
+        ChatResponse.Choice choice = new ChatResponse.Choice();
+        choice.setIndex(0);
+        choice.setMessage(msg);
+        choice.setFinishReason(root.path("finish_reason").asText("stop"));
+        response.setChoices(java.util.List.of(choice));
+        
+        // 用量信息
+        com.fasterxml.jackson.databind.JsonNode usage = root.path("usage");
+        if (!usage.isMissingNode()) {
+            ChatResponse.Usage u = new ChatResponse.Usage();
+            u.setPromptTokens(usage.path("prompt_tokens").asInt(0));
+            u.setCompletionTokens(usage.path("completion_tokens").asInt(0));
+            u.setTotalTokens(u.getPromptTokens() + u.getCompletionTokens());
+            response.setUsage(u);
+        }
+        
+        return response;
     }
 
     @Override
