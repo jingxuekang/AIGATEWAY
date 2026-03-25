@@ -212,6 +212,7 @@ public class ChatService {
         // 打印请求体用于调试
         try {
             String reqJson = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(request);
+            if (reqJson.length() > 500) reqJson = reqJson.substring(0, 500) + "...[truncated]";
             log.debug("[chatMultiModal] request={}", reqJson);
         } catch (Exception ignored) {}
 
