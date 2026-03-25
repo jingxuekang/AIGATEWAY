@@ -9,12 +9,17 @@ import org.springframework.ai.chat.messages.SystemMessage;
 import org.springframework.ai.chat.messages.UserMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.content.Media;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.ai.openai.api.OpenAiApi;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.util.MimeTypeUtils;
 import reactor.core.publisher.Flux;
 
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -49,7 +54,7 @@ public abstract class AbstractOpenAiCompatibleProvider implements ModelProvider 
     }
 
     // -------------------------------------------------------------------------
-    // 钩子方法（子类可重写）
+    // 钉子方法（子类可重写）
     // -------------------------------------------------------------------------
 
     /**
@@ -59,15 +64,10 @@ public abstract class AbstractOpenAiCompatibleProvider implements ModelProvider 
      */
     protected ChatModel buildChatModel() {
         // 如果 baseUrl 已包含版本路径（如 /v4、/v3），则 completionsPath 不再重复加 /v1
-        // 例如：https://open.bigmodel.cn/api/paas/v4 -> completionsPath=/chat/completions
-        //       https://api.deepseek.com/v1         -> completionsPath=/chat/completions
-        //       https://api.openai.com              -> completionsPath=/v1/chat/completions（默认）
         String completionsPath;
         if (this.baseUrl != null && (this.baseUrl.matches(".*/v\\d+") || this.baseUrl.matches(".*/v\\d+/.*"))) {
-            // baseUrl 已含版本号，直接用 /chat/completions
             completionsPath = "/chat/completions";
         } else {
-            // baseUrl 不含版本号，用 Spring AI 默认的 /v1/chat/completions
             completionsPath = "/v1/chat/completions";
         }
         var api = OpenAiApi.builder()
@@ -87,13 +87,11 @@ public abstract class AbstractOpenAiCompatibleProvider implements ModelProvider 
     @Override
     public boolean supports(String model) {
         if (model == null) return false;
-        // 1. 按 channel.models 精确匹配（逗号分隔）
         if (models != null && !models.isBlank()) {
             for (String m : models.split(",")) {
                 if (model.trim().equalsIgnoreCase(m.trim())) return true;
             }
         }
-        // 2. 按 provider 前缀匹配兜底
         return matchByProvider(model);
     }
 
@@ -136,13 +134,65 @@ public abstract class AbstractOpenAiCompatibleProvider implements ModelProvider 
 
         if (request.getMessages() != null) {
             for (ChatRequest.Message msg : request.getMessages()) {
-                String content = msg.getContentAsString();
-                if (content == null) content = "";
-                switch (msg.getRole()) {
-                    case "system"    -> messages.add(new SystemMessage(content));
-                    case "assistant" -> messages.add(new AssistantMessage(content));
-                    default          -> messages.add(new UserMessage(content));
+                org.springframework.ai.chat.messages.Message aiMsg;
+                if (msg.getContent() instanceof List<?> parts) {
+                    // 多模态内容：提取文本 + 图片，构建 UserMessage with Media
+                    StringBuilder textBuilder = new StringBuilder();
+                    List<Media> mediaList = new ArrayList<>();
+                    for (Object part : parts) {
+                        if (part instanceof Map<?, ?> partMap) {
+                            String type = String.valueOf(partMap.get("type"));
+                            if ("text".equals(type) || "input_text".equals(type)) {
+                                Object text = partMap.get("text");
+                                if (text != null) textBuilder.append(text);
+                            } else if ("image_url".equals(type)) {
+                                Object imageUrlObj = partMap.get("image_url");
+                                String url = null;
+                                if (imageUrlObj instanceof Map<?, ?> imageUrlMap) {
+                                    Object u = imageUrlMap.get("url");
+                                    if (u != null) url = u.toString();
+                                } else if (imageUrlObj != null) {
+                                    url = imageUrlObj.toString();
+                                }
+                                if (url != null) {
+                                    try {
+                                        if (url.startsWith("data:")) {
+                                            // base64 dataURL: data:image/jpeg;base64,xxx
+                                            String mimeType = url.substring(5, url.indexOf(";"));
+                                            String base64Data = url.substring(url.indexOf(",") + 1);
+                                            byte[] imageBytes = Base64.getDecoder().decode(base64Data);
+                                            mediaList.add(new Media(
+                                                    MimeTypeUtils.parseMimeType(mimeType),
+                                                    new ByteArrayResource(imageBytes)));
+                                        } else {
+                                            // HTTP URL
+                                            mediaList.add(new Media(
+                                                    MimeTypeUtils.IMAGE_JPEG,
+                                                    new UrlResource(url)));
+                                        }
+                                    } catch (Exception e) {
+                                        log.warn("[{}] Failed to parse image url, skipping: {}", channelName, e.getMessage());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    String text = textBuilder.length() > 0 ? textBuilder.toString() : "请描述图片内容";
+                    if (mediaList.isEmpty()) {
+                        aiMsg = new UserMessage(text);
+                    } else {
+                        aiMsg = UserMessage.builder().text(text).media(mediaList).build();
+                    }
+                } else {
+                    String content = msg.getContentAsString();
+                    if (content == null) content = "";
+                    aiMsg = switch (msg.getRole()) {
+                        case "system"    -> new SystemMessage(content);
+                        case "assistant" -> new AssistantMessage(content);
+                        default          -> new UserMessage(content);
+                    };
                 }
+                messages.add(aiMsg);
             }
         }
 
