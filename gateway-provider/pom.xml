@@ -40,6 +40,12 @@
             <artifactId>spring-ai-anthropic</artifactId>
         </dependency>
 
+        <!-- WebFlux: WebClient 支持（AzureChannelProvider 流式调用） -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webflux</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
