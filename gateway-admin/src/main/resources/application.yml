@@ -90,8 +90,8 @@ management:
     distribution:
       percentiles-histogram:
         http.server.requests: true
-      slo:
-        http.server.requests: 100ms,500ms,1s,2s
+#      slo:
+#        http.server.requests: 100ms,500ms,1s,2s
 
 # Logging
 logging:

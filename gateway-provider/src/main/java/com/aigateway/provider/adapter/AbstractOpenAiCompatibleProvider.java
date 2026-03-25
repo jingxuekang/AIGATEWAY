@@ -58,9 +58,22 @@ public abstract class AbstractOpenAiCompatibleProvider implements ModelProvider 
      * AzureChannelProvider 重写此方法使用 AzureOpenAiChatModel。
      */
     protected ChatModel buildChatModel() {
+        // 如果 baseUrl 已包含版本路径（如 /v4、/v3），则 completionsPath 不再重复加 /v1
+        // 例如：https://open.bigmodel.cn/api/paas/v4 -> completionsPath=/chat/completions
+        //       https://api.deepseek.com/v1         -> completionsPath=/chat/completions
+        //       https://api.openai.com              -> completionsPath=/v1/chat/completions（默认）
+        String completionsPath;
+        if (this.baseUrl != null && (this.baseUrl.matches(".*/v\\d+") || this.baseUrl.matches(".*/v\\d+/.*"))) {
+            // baseUrl 已含版本号，直接用 /chat/completions
+            completionsPath = "/chat/completions";
+        } else {
+            // baseUrl 不含版本号，用 Spring AI 默认的 /v1/chat/completions
+            completionsPath = "/v1/chat/completions";
+        }
         var api = OpenAiApi.builder()
                 .baseUrl(this.baseUrl)
                 .apiKey(this.apiKey)
+                .completionsPath(completionsPath)
                 .build();
         return OpenAiChatModel.builder()
                 .openAiApi(api)
