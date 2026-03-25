@@ -1,0 +1,100 @@
+jasypt:
+  encryptor:
+    password: ${JASYPT_PASSWORD:dev-jasypt-password}
+    algorithm: PBEWithHMACSHA512AndAES_256
+    iv-generator-classname: org.jasypt.iv.NoIvGenerator
+
+server:
+  port: 9082
+
+spring:
+  application:
+    name: ai-gateway-admin
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/ai_gateway?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: root
+    password:
+
+  elasticsearch:
+    uris: http://localhost:9200
+    connection-timeout: 5s
+    socket-timeout: 30s
+
+  web:
+    cors:
+      allowed-origins: http://localhost:3000,http://localhost:3001
+      allowed-methods: GET,POST,PUT,DELETE,OPTIONS,PATCH
+      allowed-headers: "*"
+      allow-credentials: true
+
+# Internal secret for gateway-core -> admin calls
+admin:
+  internal-secret: ${ADMIN_INTERNAL_SECRET:dev-internal-secret-change-in-prod}
+
+# JWT
+jwt:
+  secret: ${JWT_SECRET:dev-jwt-secret-at-least-32-chars-long}
+  expiration: 86400000
+
+# MyBatis Plus
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.aigateway.admin.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# Admin init
+aigateway:
+  admin:
+    init-username: admin
+    init-password: ${ADMIN_INIT_PASSWORD:Admin@2026!}
+    reset-password: true
+
+# Knife4j
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+
+# Springdoc
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    prometheus:
+      enabled: true
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      slo:
+        http.server.requests: 100ms,500ms,1s,2s
+
+# Logging
+logging:
+  level:
+    com.aigateway: DEBUG
+    org.springframework: INFO

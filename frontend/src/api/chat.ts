@@ -2,7 +2,7 @@ import { chatRequest } from './request'
 
 export interface ChatMessage {
   role: 'system' | 'user' | 'assistant'
-  content: string
+  content: string | Array<{ type: string; text?: string; image_url?: { url: string; detail?: string } }>
 }
 
 export interface ChatRequest {
@@ -28,6 +28,11 @@ export interface ChatResponse {
   }
 }
 
-export const sendChatMessage = (data: ChatRequest) => {
-  return chatRequest.post<any, ChatResponse>('/v1/chat/completions', data)
+/**
+ * 发送聊天消息
+ * @param data 请求体
+ * @param endpoint 接口路径，默认 /v1/chat/completions，多模态时传 /v1/responses
+ */
+export const sendChatMessage = (data: ChatRequest, endpoint = '/v1/chat/completions') => {
+  return chatRequest.post<any, ChatResponse>(endpoint, data)
 }

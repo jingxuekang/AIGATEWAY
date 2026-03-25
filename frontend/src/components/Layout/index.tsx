@@ -24,6 +24,7 @@ const Layout = () => {
 
   const adminMenuItems = [
     { key: '/', icon: <DashboardOutlined />, label: '仪表盘' },
+    { key: '/account', icon: <UserOutlined />, label: '用户中心' },
     {
       type: 'group' as const, label: '访问与鉴权', children: [
         { key: '/channel', icon: <ApiOutlined />, label: '渠道管理' },
@@ -35,12 +36,13 @@ const Layout = () => {
       type: 'group' as const, label: '用户与计费', children: [
         { key: '/user', icon: <UserOutlined />, label: '用户管理' },
         { key: '/topup', icon: <DollarOutlined />, label: '充值记录' },
+        { key: '/redemption', icon: <DollarOutlined />, label: '兑换码管理' },
       ]
     },
     {
       type: 'group' as const, label: '模型管理', children: [
-        { key: '/models', icon: <ApiOutlined />, label: '模型管理' },
-        { key: '/model-subscriptions', icon: <ApartmentOutlined />, label: '模型订阅' },
+        { key: '/providers', icon: <ApiOutlined />, label: 'Provider 管理' },
+        { key: '/models', icon: <ApartmentOutlined />, label: '模型管理' },
       ]
     },
     {
@@ -59,15 +61,16 @@ const Layout = () => {
   ]
 
   const userMenuItems = [
-    { key: '/', icon: <DashboardOutlined />, label: '仪表盘' },
+    { key: '/account', icon: <UserOutlined />, label: '用户中心' },
     {
       type: 'group' as const, label: '我的密钥', children: [
+        { key: '/keys', icon: <KeyOutlined />, label: 'API Keys' },
         { key: '/key-applications', icon: <KeyOutlined />, label: '我的申请' },
       ]
     },
     {
-      type: 'group' as const, label: '模型订阅', children: [
-        { key: '/model-subscriptions', icon: <ApartmentOutlined />, label: '可用模型' },
+      type: 'group' as const, label: '模型', children: [
+        { key: '/models', icon: <ApartmentOutlined />, label: '可用模型' },
       ]
     },
     {
@@ -88,12 +91,10 @@ const Layout = () => {
   const buildRouteMeta = (items: any[]) => {
     const map: Record<string, { label: string; group?: string }> = {}
     const groupDefaultRoute: Record<string, string> = {}
-
     const walk = (arr: any[], currentGroup?: string) => {
       for (const it of arr) {
         if (!it) continue
         if (it.type === 'group' && typeof it.label === 'string' && Array.isArray(it.children)) {
-          // 默认路由：group 下第一个拥有 key 的子页面
           if (groupDefaultRoute[it.label] == null) {
             const first = (it.children as any[]).find((c) => c && typeof c.key === 'string')
             if (first?.key) groupDefaultRoute[it.label] = first.key
@@ -101,9 +102,7 @@ const Layout = () => {
           walk(it.children, it.label)
           continue
         }
-        if (it.key && typeof it.label === 'string') {
-          map[it.key] = { label: it.label, group: currentGroup }
-        }
+        if (it.key && typeof it.label === 'string') map[it.key] = { label: it.label, group: currentGroup }
         if (Array.isArray(it.children)) walk(it.children, currentGroup)
       }
     }
@@ -153,14 +152,14 @@ const Layout = () => {
           </Tag>
           <Dropdown menu={userDropdownItems} placement="bottomRight">
             <div className="header-user">
-              <Avatar size={28} icon={<UserOutlined />} style={{ background: '#1677ff' }} />
+              <Avatar size={32} icon={<UserOutlined />} style={{ background: '#0077fa' }} />
               <span className="header-user-name">{username}</span>
             </div>
           </Dropdown>
         </div>
       </Header>
       <AntdLayout>
-        <Sider width={216} className="app-sider" theme="light">
+        <Sider width={200} className="app-sider" theme="light">
           <Menu
             mode="inline"
             selectedKeys={[location.pathname]}

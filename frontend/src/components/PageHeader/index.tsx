@@ -21,10 +21,10 @@ export type PageHeaderActionItem = {
 export interface PageHeaderProps {
   title: React.ReactNode
   subtitle?: React.ReactNode
-  breadcrumb?: PageBreadcrumbItem[] // 可覆盖自动面包屑
-  primaryAction?: React.ReactNode // 主按钮：永远在最右
-  moreActions?: PageHeaderActionItem[] // 次操作：收进更多菜单
-  actions?: React.ReactNode // 兼容旧用法（不推荐）
+  breadcrumb?: PageBreadcrumbItem[]
+  primaryAction?: React.ReactNode
+  moreActions?: PageHeaderActionItem[]
+  actions?: React.ReactNode
 }
 
 type PageHeaderContextValue = {
@@ -33,7 +33,10 @@ type PageHeaderContextValue = {
 
 const PageHeaderContext = createContext<PageHeaderContextValue>({})
 
-export const PageHeaderProvider: React.FC<React.PropsWithChildren<PageHeaderContextValue>> = ({ breadcrumb, children }) => {
+export const PageHeaderProvider: React.FC<React.PropsWithChildren<PageHeaderContextValue>> = ({
+  breadcrumb,
+  children,
+}) => {
   return <PageHeaderContext.Provider value={{ breadcrumb }}>{children}</PageHeaderContext.Provider>
 }
 
@@ -41,7 +44,14 @@ function useAutoBreadcrumb() {
   return useContext(PageHeaderContext).breadcrumb
 }
 
-const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, breadcrumb, primaryAction, moreActions, actions }) => {
+const PageHeader: React.FC<PageHeaderProps> = ({
+  title,
+  subtitle,
+  breadcrumb,
+  primaryAction,
+  moreActions,
+  actions,
+}) => {
   const autoBreadcrumb = useAutoBreadcrumb()
   const finalBreadcrumb = breadcrumb ?? autoBreadcrumb
 
@@ -55,48 +65,44 @@ const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, breadcrumb, pr
   }))
 
   return (
-    <div className="ag-page-header">
-      <div className="ag-page-header-row">
-        <div className="ag-page-header-left">
-          {finalBreadcrumb?.length ? (
-            <Breadcrumb
-              items={finalBreadcrumb.map((b) => ({
-                title: b.href ? (
-                  <a href={b.href} onClick={(e) => (b.onClick ? (e.preventDefault(), b.onClick()) : undefined)}>
-                    {b.title}
-                  </a>
-                ) : (
-                  b.title
-                ),
-              }))}
-            />
-          ) : null}
-        </div>
+    <header className="ag-page-header">
+      {finalBreadcrumb?.length ? (
+        <Breadcrumb
+          className="ag-page-header-breadcrumb"
+          items={finalBreadcrumb.map((b) => ({
+            title: b.href ? (
+              <a
+                href={b.href}
+                onClick={(e) => (b.onClick ? (e.preventDefault(), b.onClick()) : undefined)}
+              >
+                {b.title}
+              </a>
+            ) : (
+              b.title
+            ),
+          }))}
+        />
+      ) : null}
 
-        <div className="ag-page-header-center">
-          <Typography.Title level={2} className="ag-page-header-title">
+      <div className="ag-page-header-main">
+        <div className="ag-page-header-titles">
+          <Typography.Title level={4} className="ag-page-header-title">
             {title}
           </Typography.Title>
           {subtitle ? <div className="ag-page-header-subtitle">{subtitle}</div> : null}
         </div>
-
-        <div className="ag-page-header-right">
+        <div className="ag-page-header-actions">
           {actions}
           {dropdownItems.length ? (
-            <Dropdown
-              menu={{ items: dropdownItems }}
-              placement="bottomRight"
-              trigger={['click']}
-            >
-              <Button className="ag-page-header-more" icon={<EllipsisOutlined />} />
+            <Dropdown menu={{ items: dropdownItems }} placement="bottomRight" trigger={['click']}>
+              <Button type="text" className="ag-page-header-more" icon={<EllipsisOutlined />} />
             </Dropdown>
           ) : null}
           {primaryAction}
         </div>
       </div>
-    </div>
+    </header>
   )
 }
 
 export default PageHeader
-

@@ -13,7 +13,7 @@
 
     <artifactId>gateway-provider</artifactId>
     <name>Gateway Provider</name>
-    <description>Model provider adapters</description>
+    <description>Model provider adapters - dynamic channel routing via WebClient</description>
 
     <dependencies>
         <dependency>
@@ -22,20 +22,27 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- Provider 是适配层库：仅需要 WebClient（不应引入任何 Web Server Starter） -->
+        <!-- Reactor: Flux/Mono 类型支持（流式响应） -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-core</artifactId>
+        </dependency>
+
+        <!-- WebFlux: WebClient 支持（DynamicChannelProvider 调用上游） -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webflux</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>io.projectreactor.netty</groupId>
-            <artifactId>reactor-netty-http</artifactId>
         </dependency>
 
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
         </dependency>
     </dependencies>
 </project>

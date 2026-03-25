@@ -37,4 +37,8 @@ public class KeyApplication {
     private LocalDateTime createTime;
     
     private LocalDateTime updateTime;
+
+    /** 申请人用户名（非数据库字段，查询时填充）*/
+    @com.baomidou.mybatisplus.annotation.TableField(exist = false)
+    private String username;
 }

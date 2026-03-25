@@ -1,5 +1,5 @@
 import { Form, Input, InputNumber, Switch, Button, Card, message, Tabs } from 'antd'
-import { useMutation } from 'react-query'
+import { useMutation, useQuery, useQueryClient } from 'react-query'
 import { request } from '../../api/request'
 import PageHeader from '../../components/PageHeader'
 import './index.css'
@@ -7,6 +7,7 @@ import './index.css'
 const Setting = () => {
   const [systemForm] = Form.useForm()
   const [securityForm] = Form.useForm()
+  const queryClient = useQueryClient()
 
   const updateMutation = useMutation(
     (values: any) => request.put('/api/admin/settings', values),
@@ -23,11 +24,35 @@ const Setting = () => {
     })
   }
 
-  const handleSecuritySubmit = () => {
-    securityForm.validateFields().then(values => {
-      updateMutation.mutate({ ...values, category: 'security' })
-    })
-  }
+  const { isLoading: securityLoading } = useQuery(
+    'security-settings',
+    () => request.get<any, Record<string, string>>('/api/admin/security-settings'),
+    {
+      onSuccess: (cfg) => {
+        securityForm.setFieldsValue({
+          rateLimitEnabled: cfg['gateway.rate-limit.enabled'] === 'true',
+          ipLimitEnabled: cfg['gateway.rate-limit.ip-limit-enabled'] === 'true',
+          promptGuardEnabled: cfg['gateway.prompt-guard.enabled'] === 'true',
+          sensitiveWordsEnabled: cfg['gateway.prompt-guard.sensitive-words-enabled'] === 'true',
+        })
+      },
+    }
+  )
+
+  const saveSecurityMutation = useMutation(
+    (values: any) => request.post('/api/admin/security-settings', {
+      rateLimitEnabled: values.rateLimitEnabled,
+      ipLimitEnabled: values.ipLimitEnabled,
+      promptGuardEnabled: values.promptGuardEnabled,
+      sensitiveWordsEnabled: values.sensitiveWordsEnabled,
+    }),
+    {
+      onSuccess: () => {
+        message.success('安全策略已保存')
+        queryClient.invalidateQueries('security-settings')
+      },
+    }
+  )
 
   const systemSettings = (
     <Card>
@@ -57,25 +82,30 @@ const Setting = () => {
   )
 
   const securitySettings = (
-    <Card>
-      <Form form={securityForm} layout="vertical">
-        <Form.Item name="maxRequestsPerMinute" label="每分钟最大请求数" rules={[{ required: true }]}>
-          <InputNumber min={1} style={{ width: '100%' }} />
-        </Form.Item>
-        <Form.Item name="maxRequestsPerDay" label="每天最大请求数" rules={[{ required: true }]}>
-          <InputNumber min={1} style={{ width: '100%' }} />
-        </Form.Item>
-        <Form.Item name="enableIpWhitelist" label="启用 IP 白名单" valuePropName="checked">
+    <Card loading={securityLoading}>
+      <Form
+        form={securityForm}
+        layout="vertical"
+        onFinish={values => saveSecurityMutation.mutate(values)}
+      >
+        <Form.Item name="rateLimitEnabled" label="启用限流" valuePropName="checked">
           <Switch />
         </Form.Item>
-        <Form.Item name="ipWhitelist" label="IP 白名单（每行一个）">
-          <Input.TextArea rows={4} placeholder="192.168.1.1" />
+        <Form.Item name="ipLimitEnabled" label="启用 IP 限流" valuePropName="checked">
+          <Switch />
         </Form.Item>
-        <Form.Item name="enableAuditLog" label="启用审计日志" valuePropName="checked">
+        <Form.Item name="promptGuardEnabled" label="启用 Prompt 注入防护" valuePropName="checked">
+          <Switch />
+        </Form.Item>
+        <Form.Item name="sensitiveWordsEnabled" label="启用敏感词过滤" valuePropName="checked">
           <Switch />
         </Form.Item>
         <Form.Item>
-          <Button type="primary" onClick={handleSecuritySubmit} loading={updateMutation.isLoading}>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={saveSecurityMutation.isLoading}
+          >
             保存安全设置
           </Button>
         </Form.Item>

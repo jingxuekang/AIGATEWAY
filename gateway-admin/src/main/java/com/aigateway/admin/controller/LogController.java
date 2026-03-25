@@ -1,21 +1,29 @@
 package com.aigateway.admin.controller;
 
 import com.aigateway.admin.entity.UsageLogRecord;
+import com.aigateway.admin.entity.User;
+import com.aigateway.admin.entity.AdminUser;
+import com.aigateway.admin.service.AdminUserService;
 import com.aigateway.admin.service.UsageLogRecordService;
+import com.aigateway.admin.service.UserService;
 import com.aigateway.common.dto.UsageLogDTO;
+import com.aigateway.common.exception.BusinessException;
 import com.aigateway.common.result.Result;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Tag(name = "Usage Logs", description = "调用日志采集与查询")
 @RestController
@@ -24,6 +32,15 @@ import java.util.Map;
 public class LogController {
 
     private final UsageLogRecordService usageLogRecordService;
+    private final UserService userService;
+    private final AdminUserService adminUserService;
+
+    private static void requireAdmin(HttpServletRequest request) {
+        Object role = request.getAttribute("role");
+        if (role == null || !"admin".equals(role.toString())) {
+            throw new BusinessException(403, "Forbidden: admin role required");
+        }
+    }
 
     @Operation(summary = "接收 Usage 日志（网关上报）")
     @PostMapping
@@ -63,9 +80,10 @@ public class LogController {
         return str.length() > maxLength ? str.substring(0, maxLength) : str;
     }
 
-    @Operation(summary = "分页查询日志", description = "支持按时间、模型、状态、租户、traceId 筛选")
+    @Operation(summary = "分页查询日志（admin 查全部，普通用户查自己）", description = "支持按时间、模型、状态、租户、traceId 筛选")
     @GetMapping
     public Result<Map<String, Object>> queryLogs(
+            HttpServletRequest request,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
             @RequestParam(required = false) String model,
@@ -75,6 +93,10 @@ public class LogController {
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "20") Integer pageSize) {
 
+        Object roleAttr = request.getAttribute("role");
+        Object userIdAttr = request.getAttribute("userId");
+        boolean isAdmin = roleAttr != null && "admin".equals(roleAttr.toString());
+
         LambdaQueryWrapper<UsageLogRecord> wrapper = new LambdaQueryWrapper<>();
         if (startTime != null) wrapper.ge(UsageLogRecord::getTimestamp, startTime);
         if (endTime   != null) wrapper.le(UsageLogRecord::getTimestamp, endTime);
@@ -82,9 +104,37 @@ public class LogController {
         if (status    != null && !status.isBlank())   wrapper.eq(UsageLogRecord::getStatus, status);
         if (tenantId  != null && !tenantId.isBlank()) wrapper.eq(UsageLogRecord::getTenantId, tenantId);
         if (traceId   != null && !traceId.isBlank())  wrapper.eq(UsageLogRecord::getTraceId, traceId);
+
+        // 普通用户只能查自己的日志
+        if (!isAdmin && userIdAttr != null) {
+            wrapper.eq(UsageLogRecord::getUserId, userIdAttr.toString());
+        }
+
         wrapper.orderByDesc(UsageLogRecord::getTimestamp);
 
         IPage<UsageLogRecord> result = usageLogRecordService.page(new Page<>(page, pageSize), wrapper);
+
+        // 批量填充 username（优先 user 表，未命中再查 admin_user）
+        List<UsageLogRecord> records = result.getRecords();
+        List<Long> userIds = records.stream()
+                .map(r -> { try { return r.getUserId() != null ? Long.parseLong(r.getUserId()) : null; } catch (Exception e) { return null; } })
+                .filter(id -> id != null).distinct().toList();
+        if (!userIds.isEmpty()) {
+            Map<Long, String> userMap = userService.listByIds(userIds).stream()
+                    .collect(Collectors.toMap(User::getId, User::getUsername));
+            Map<Long, String> adminUserMap = adminUserService.listByIds(userIds).stream()
+                    .collect(Collectors.toMap(AdminUser::getId, AdminUser::getUsername));
+            records.forEach(r -> {
+                try {
+                    if (r.getUserId() != null) {
+                        Long uid = Long.parseLong(r.getUserId());
+                        String username = userMap.get(uid);
+                        if (username == null) username = adminUserMap.get(uid);
+                        r.setUsername(username != null ? username : r.getUserId());
+                    }
+                } catch (Exception ignored) {}
+            });
+        }
 
         Map<String, Object> resp = new HashMap<>();
         resp.put("list",     result.getRecords());
@@ -95,12 +145,14 @@ public class LogController {
         return Result.success(resp);
     }
 
-    @Operation(summary = "日志统计", description = "按时间段统计总量、成功率、平均延迟、Token 消耗")
+    @Operation(summary = "日志统计（仅 admin）", description = "按时间段统计总量、成功率、平均延迟、Token 消耗")
     @GetMapping("/statistics")
     public Result<Map<String, Object>> statistics(
+            HttpServletRequest request,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startTime,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endTime,
             @RequestParam(required = false) String tenantId) {
+        requireAdmin(request);
 
         LambdaQueryWrapper<UsageLogRecord> wrapper = new LambdaQueryWrapper<>();
         if (startTime != null) wrapper.ge(UsageLogRecord::getTimestamp, startTime);

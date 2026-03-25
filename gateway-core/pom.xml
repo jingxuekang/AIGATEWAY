@@ -29,18 +29,24 @@
             <version>${project.version}</version>
         </dependency>
 
-        <!-- Spring MVC（主框架，Tomcat） -->
+        <!-- Jasypt: 配置文件敏感信息加密 -->
+        <dependency>
+            <groupId>com.github.ulisesbocchio</groupId>
+            <artifactId>jasypt-spring-boot-starter</artifactId>
+            <version>3.0.5</version>
+        </dependency>
+
+        <!-- Spring MVC -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- 仅为 WebClient/Flux 等响应式类型提供支持（不切换为 Reactive Web Server） -->
+        <!-- WebClient/Flux 支持（Admin 内部调用 + SSE 流式响应） -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webflux</artifactId>
         </dependency>
-        <!-- WebClient 默认使用的 Reactor Netty HTTP 客户端 -->
         <dependency>
             <groupId>io.projectreactor.netty</groupId>
             <artifactId>reactor-netty-http</artifactId>
@@ -57,6 +63,22 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Resilience4j 限流 + 熔断 -->
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-spring-boot3</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>io.github.resilience4j</groupId>
+            <artifactId>resilience4j-reactor</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
+
         <!-- Prometheus + Actuator -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -66,6 +88,28 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+
+        <!-- Loki Logback Appender: 日志推送到 Loki -->
+        <dependency>
+            <groupId>com.github.loki4j</groupId>
+            <artifactId>loki-logback-appender</artifactId>
+            <version>1.4.2</version>
+        </dependency>
+
+        <!-- Caffeine 本地缓存（API Key 验证结果缓存，减少 admin 调用）-->
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+
+        <!--
+            spring-ai-client-chat 已移除，Spring AI 依赖全部清理
+            改由 DynamicChannelProvider 直接用 WebClient 调用上游 OpenAI 兼容接口
+        -->
     </dependencies>
 
     <build>

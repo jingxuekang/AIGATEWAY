@@ -1,26 +1,23 @@
 package com.aigateway.admin.config;
 
-import com.baomidou.mybatisplus.annotation.DbType;
 import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
-import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
  * MyBatis Plus 配置
+ * 
+ * MyBatis-Plus 3.5.9+ 移除了 PaginationInnerInterceptor，
+ * 分页功能已内置到 MybatisPlusInterceptor，无需单独添加。
  */
 @Configuration
 public class MybatisPlusConfig {
-    
+
     /**
-     * 分页插件
+     * MyBatis-Plus 插件（分页等功能已内置）
      */
     @Bean
     public MybatisPlusInterceptor mybatisPlusInterceptor() {
-        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
-        PaginationInnerInterceptor paginationInterceptor = new PaginationInnerInterceptor(DbType.MYSQL);
-        paginationInterceptor.setMaxLimit(1000L);
-        interceptor.addInnerInterceptor(paginationInterceptor);
-        return interceptor;
+        return new MybatisPlusInterceptor();
     }
 }

@@ -67,9 +67,32 @@ CREATE TABLE IF NOT EXISTS `key_application` (
   KEY `idx_approval_status` (`approval_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Provider Table
+CREATE TABLE IF NOT EXISTS `provider` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(100) NOT NULL,
+  `code` VARCHAR(50) NOT NULL,
+  `base_url` VARCHAR(255) NOT NULL,
+  `api_key` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+  `status` TINYINT NOT NULL DEFAULT 1,
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `deleted` TINYINT NOT NULL DEFAULT 0,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_code` (`code`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Insert sample data
 INSERT INTO `model` (`model_name`, `model_version`, `provider`, `description`, `status`, `input_price`, `output_price`, `max_tokens`, `support_stream`) VALUES
 ('gpt-4', '1.0', 'openai', 'GPT-4 Model', 1, 0.03, 0.06, 8192, 1),
 ('gpt-3.5-turbo', '1.0', 'openai', 'GPT-3.5 Turbo Model', 1, 0.0015, 0.002, 4096, 1),
 ('claude-3-opus', '1.0', 'anthropic', 'Claude 3 Opus Model', 1, 0.015, 0.075, 200000, 1),
 ('claude-3-sonnet', '1.0', 'anthropic', 'Claude 3 Sonnet Model', 1, 0.003, 0.015, 200000, 1);
+
+-- Insert Provider sample data
+INSERT INTO `provider` (`name`, `code`, `base_url`, `api_key`, `description`, `status`) VALUES
+('OpenAI', 'openai', 'https://api.openai.com/v1', 'sk-your-openai-api-key', 'OpenAI Official API Service', 1),
+('DeepSeek', 'deepseek', 'https://api.deepseek.com/v1', 'sk-your-deepseek-api-key', 'DeepSeek AI Service', 1),
+('Azure OpenAI', 'azure-openai', 'https://your-resource.openai.azure.com/openai/deployments/your-deployment', 'your-azure-api-key', 'Azure OpenAI Service', 0);

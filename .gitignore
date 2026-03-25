@@ -32,6 +32,9 @@ application-dev.yml
 .env
 .env.local
 
-# API Keys (security)
-**/application.yml
-!**/application.yml.example
+# Secret profile configs (contains master key, NEVER commit)
+application-secret.yml
+**/application-secret.yml
+
+# Compiled secrets backup
+*.enc.bak

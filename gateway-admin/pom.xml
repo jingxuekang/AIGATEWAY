@@ -23,6 +23,13 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- Jasypt: 配置文件敏感信息加密（本地 .m2 已有，无需从镜像下载） -->
+        <dependency>
+            <groupId>com.github.ulisesbocchio</groupId>
+            <artifactId>jasypt-spring-boot-starter</artifactId>
+            <version>3.0.5</version>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -38,7 +45,7 @@
             <artifactId>mysql-connector-j</artifactId>
         </dependency>
 
-        <!-- 仅为 WebClient 提供支持（admin 本身仍是 Spring MVC/Tomcat） -->
+        <!-- 浠呬负 WebClient 鎻愪緵鏀寔锛坅dmin 鏈韩浠嶆槸 Spring MVC/Tomcat锛?-->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webflux</artifactId>
@@ -78,7 +85,7 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Spring Security Crypto（密码加密，无需完整 Security） -->
+        <!-- Spring Security Crypto锛堝瘑鐮佸姞瀵嗭紝鏃犻渶瀹屾暣 Security锛?-->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
@@ -103,6 +110,19 @@
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
+        <!-- Loki Logback Appender: 日志推送到 Loki -->
+        <dependency>
+            <groupId>com.github.loki4j</groupId>
+            <artifactId>loki-logback-appender</artifactId>
+            <version>1.4.2</version>
+        </dependency>
+        
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -114,3 +134,4 @@
         </plugins>
     </build>
 </project>
+

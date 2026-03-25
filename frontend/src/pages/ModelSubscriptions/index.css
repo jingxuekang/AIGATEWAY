@@ -10,8 +10,19 @@
 }
 
 .page-header h2 {
-  font-size: 20px;
-  font-weight: 600;
-  color: #1a1a2e;
+  font-size: var(--ag-font-title);
+  font-weight: var(--ag-font-weight-semibold);
+  letter-spacing: var(--ag-letter-tight);
+  color: var(--ag-text-0);
   margin: 0;
 }
+
+/* 已订阅行高亮 */
+.subscribed-row {
+  background-color: #f6ffed;
+}
+
+.subscribed-row:hover > td {
+  background-color: #d9f7be !important;
+}
+

@@ -9,6 +9,7 @@ import cn.hutool.core.util.IdUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -58,25 +59,44 @@ public class ApiKeyService extends ServiceImpl<ApiKeyMapper, ApiKey> {
     }
 
     /**
-     * 扣减配额（原子性 UPDATE，防止超用）
+     * 扣减配额（原子性 UPDATE，防止并发超用）
+     * total_quota = 0 表示不限配额
      * @param keyId  API Key ID
      * @param tokens 本次消耗的 token 数
      * @return true=扣减成功，false=配额不足或 Key 不存在
      */
+    /**
+     * 修改 Key 显示名称（用户只能改自己的；admin 可改任意）
+     */
+    public void updateKeyName(Long keyId, String newName, Long operatorUserId, boolean isAdmin) {
+        if (newName == null || newName.isBlank()) {
+            throw new com.aigateway.common.exception.BusinessException(400, "keyName is required");
+        }
+        String trimmed = newName.trim();
+        if (trimmed.length() > 255) {
+            throw new com.aigateway.common.exception.BusinessException(400, "keyName too long (max 255)");
+        }
+        ApiKey key = getById(keyId);
+        if (key == null) {
+            throw new com.aigateway.common.exception.BusinessException(404, "Key not found");
+        }
+        if (!isAdmin && (operatorUserId == null || !operatorUserId.equals(key.getUserId()))) {
+            throw new com.aigateway.common.exception.BusinessException(403, "Access denied");
+        }
+        key.setKeyName(trimmed);
+        key.setUpdateTime(LocalDateTime.now());
+        updateById(key);
+        log.info("Updated API Key name: id={}, name={}", keyId, trimmed);
+    }
+
     public boolean deductQuota(Long keyId, long tokens) {
         if (tokens <= 0) return true;
-        ApiKey apiKey = getById(keyId);
-        if (apiKey == null) return false;
-        // totalQuota == 0 表示不限配额
-        if (apiKey.getTotalQuota() != null && apiKey.getTotalQuota() > 0) {
-            long remaining = apiKey.getTotalQuota() - (apiKey.getUsedQuota() == null ? 0 : apiKey.getUsedQuota());
-            if (remaining < tokens) {
-                log.warn("Quota insufficient: keyId={}, remaining={}, requested={}", keyId, remaining, tokens);
-                return false;
-            }
+        // 单条原子 SQL：total_quota=0 不限额，否则检查 used_quota+tokens<=total_quota
+        int affected = baseMapper.incrementUsedQuota(keyId, tokens);
+        if (affected == 0) {
+            log.warn("Quota insufficient or key not found: keyId={}, tokens={}", keyId, tokens);
+            return false;
         }
-        // 用 UPDATE 语句原子性递增，避免并发问题
-        baseMapper.incrementUsedQuota(keyId, tokens);
         log.debug("Deducted quota: keyId={}, tokens={}", keyId, tokens);
         return true;
     }

@@ -13,11 +13,33 @@ export interface LoginResponse {
   expiresIn: number
 }
 
+/** /api/admin/auth/me 返回结构 */
+export interface MeResponse {
+  userId: number
+  role: string
+  user?: {
+    id: number
+    username: string
+    email?: string
+    quota: number
+    usedQuota: number
+    status: number
+    createTime?: string
+  }
+  admin?: {
+    id: number
+    username: string
+    email?: string
+    role: string
+    status?: number
+  }
+}
+
 export const authApi = {
   login: (data: LoginRequest): Promise<LoginResponse> =>
     request.post('/api/admin/auth/login', data),
 
   logout: () => request.post('/api/admin/auth/logout'),
 
-  me: (): Promise<LoginResponse> => request.get('/api/admin/auth/me'),
+  me: (): Promise<MeResponse> => request.get('/api/admin/auth/me'),
 }

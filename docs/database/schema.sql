@@ -67,9 +67,32 @@ CREATE TABLE IF NOT EXISTS `key_application` (
   KEY `idx_approval_status` (`approval_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='API Key 申请表';
 
+-- Provider 表
+CREATE TABLE IF NOT EXISTS `provider` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `name` VARCHAR(100) NOT NULL COMMENT 'Provider 名称',
+  `code` VARCHAR(50) NOT NULL COMMENT 'Provider 唯一标识',
+  `base_url` VARCHAR(255) NOT NULL COMMENT 'Base URL',
+  `api_key` VARCHAR(255) NOT NULL COMMENT 'API Key',
+  `description` TEXT COMMENT '描述',
+  `status` TINYINT NOT NULL DEFAULT 1 COMMENT '状态: 0-禁用, 1-启用',
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除: 0-未删除, 1-已删除',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_code` (`code`),
+  KEY `idx_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Provider 表';
+
 -- 插入示例数据
 INSERT INTO `model` (`model_name`, `model_version`, `provider`, `description`, `status`, `input_price`, `output_price`, `max_tokens`, `support_stream`) VALUES
 ('gpt-4', '1.0', 'openai', 'GPT-4 模型', 1, 0.03, 0.06, 8192, 1),
 ('gpt-3.5-turbo', '1.0', 'openai', 'GPT-3.5 Turbo 模型', 1, 0.0015, 0.002, 4096, 1),
 ('claude-3-opus', '1.0', 'anthropic', 'Claude 3 Opus 模型', 1, 0.015, 0.075, 200000, 1),
 ('claude-3-sonnet', '1.0', 'anthropic', 'Claude 3 Sonnet 模型', 1, 0.003, 0.015, 200000, 1);
+
+-- 插入 Provider 示例数据
+INSERT INTO `provider` (`name`, `code`, `base_url`, `api_key`, `description`, `status`) VALUES
+('OpenAI', 'openai', 'https://api.openai.com/v1', 'sk-your-openai-api-key', 'OpenAI 官方API服务', 1),
+('DeepSeek', 'deepseek', 'https://api.deepseek.com/v1', 'sk-your-deepseek-api-key', 'DeepSeek AI 服务', 1),
+('Azure OpenAI', 'azure-openai', 'https://your-resource.openai.azure.com/openai/deployments/your-deployment', 'your-azure-api-key', 'Azure OpenAI 服务', 0);

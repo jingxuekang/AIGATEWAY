@@ -2,7 +2,7 @@ import axios from 'axios'
 import { message } from 'antd'
 
 const request = axios.create({
-  baseURL: '',
+  baseURL: (import.meta as any).env?.VITE_API_BASE_URL || '',
   timeout: 30000,
 })
 
@@ -44,7 +44,7 @@ request.interceptors.response.use(
 
 // Chat API 单独实例（直接调用 gateway-core，9080 端口）
 const chatRequest = axios.create({
-  baseURL: 'http://localhost:9080',
+  baseURL: (import.meta as any).env?.VITE_CHAT_BASE_URL || 'http://localhost:9080',
   timeout: 60000,
 })
 

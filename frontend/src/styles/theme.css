@@ -1,0 +1,51 @@
+/**
+ * AI Gateway 全局设计变量（参考 New-API：中性灰底、白侧边栏、主色蓝、紧凑圆角）
+ */
+:root {
+  /* 主色 — 接近 Semi Design 默认蓝 */
+  --ag-primary: #0077fa;
+  --ag-primary-hover: #0062d6;
+  --ag-primary-active: #004fb3;
+  --ag-primary-bg: rgba(0, 119, 250, 0.08);
+  --ag-primary-bg-active: rgba(0, 119, 250, 0.12);
+
+  /* 文字 */
+  --ag-text-0: #1c1f23;
+  --ag-text-1: rgba(28, 31, 35, 0.8);
+  --ag-text-2: rgba(28, 31, 35, 0.6);
+  --ag-text-3: rgba(28, 31, 35, 0.45);
+
+  /* 背景 */
+  --ag-bg-0: #ffffff;
+  --ag-bg-1: #f7f8fa;
+  --ag-bg-2: #f2f3f5;
+
+  /* 边线 */
+  --ag-border: rgba(28, 31, 35, 0.08);
+  --ag-border-light: rgba(28, 31, 35, 0.06);
+
+  /* 布局 */
+  --ag-header-height: 64px;
+  --ag-sider-width: 200px;
+  --ag-radius-sm: 6px;
+  --ag-radius-md: 8px;
+  --ag-radius-lg: 12px;
+  --ag-content-padding: 20px 24px;
+  --ag-shadow-card: 0 1px 2px rgba(28, 31, 35, 0.06), 0 1px 6px rgba(28, 31, 35, 0.04);
+  --ag-shadow-float: 0 4px 14px rgba(28, 31, 35, 0.08);
+
+  /* 字号阶梯 */
+  --ag-font-xs: 12px;
+  --ag-font-sm: 13px;
+  --ag-font-base: 14px;
+  --ag-font-md: 15px;
+  --ag-font-lg: 16px;
+  --ag-font-title: 20px;
+  --ag-font-display: 22px;
+
+  --ag-font-weight-medium: 500;
+  --ag-font-weight-semibold: 600;
+  --ag-line-tight: 1.35;
+  --ag-line-normal: 1.5;
+  --ag-letter-tight: -0.02em;
+}

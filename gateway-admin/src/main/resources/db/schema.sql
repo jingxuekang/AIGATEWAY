@@ -69,6 +69,26 @@ CREATE TABLE IF NOT EXISTS channel (
     INDEX idx_provider (provider)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 普通用户表（业务用户，用于 API Key、订阅、计费等）
+-- 注意：user 为关键字，使用反引号包裹
+CREATE TABLE IF NOT EXISTS `user` (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    username VARCHAR(255) NOT NULL,
+    email VARCHAR(255),
+    password VARCHAR(255) NOT NULL,
+    role VARCHAR(50) DEFAULT 'user',
+    status INT DEFAULT 1,
+    quota BIGINT DEFAULT 0,
+    used_quota BIGINT DEFAULT 0,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    UNIQUE KEY uk_username (username),
+    UNIQUE KEY uk_email (email),
+    INDEX idx_role (role),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 管理后台用户表
 CREATE TABLE IF NOT EXISTS admin_user (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -115,6 +135,21 @@ CREATE TABLE IF NOT EXISTS system_setting (
     config_key VARCHAR(255) NOT NULL,
     config_value TEXT,
     UNIQUE KEY uk_config_key (config_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Provider 表（官方厂商元数据）
+CREATE TABLE IF NOT EXISTS provider (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    code VARCHAR(64) NOT NULL COMMENT '唯一标识，如 openai/deepseek/volcano',
+    name VARCHAR(255) NOT NULL COMMENT '展示名称',
+    base_url VARCHAR(512) NOT NULL COMMENT '官方 API Base URL',
+    status INT DEFAULT 1 COMMENT '1=启用 0=禁用',
+    description TEXT,
+    create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+    update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted INT DEFAULT 0,
+    UNIQUE KEY uk_code (code),
+    INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 任务日志表

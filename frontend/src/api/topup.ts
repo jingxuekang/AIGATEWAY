@@ -10,6 +10,6 @@ export interface TopUpRecord {
 }
 
 export const getTopUps = () => {
-  return request.get<any, TopUpRecord[]>('/api/admin/topups')
+  return request.get<any, TopUpRecord[]>('/api/admin/topup')
 }
 
