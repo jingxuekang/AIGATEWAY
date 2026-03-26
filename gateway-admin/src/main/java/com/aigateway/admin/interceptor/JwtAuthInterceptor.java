@@ -28,7 +28,6 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
     private final JwtUtil jwtUtil;
     private final ObjectMapper objectMapper;
 
-    // 内部调用密钥：不提供默认值，避免把明文默认密钥提交/推送
     @Value("${admin.internal-secret:}")
     private String internalSecret;
 
@@ -48,16 +47,16 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
     };
 
     /**
-     * 内部接口规则：path + method 精确匹配，校验 X-Internal-Secret
-     * 格式："METHOD:path"，path 用 startsWith 匹配
+     * 内部接口规则：[method, pathPrefix, optionalSuffix]
+     * 匹配条件：method 相同 AND path.startsWith(prefix) AND (无 suffix OR path.contains(suffix))
+     * 精确限定 suffix 防止 POST /api/admin/keys/{id}/chat 被误判为内部接口
      */
     private static final String[][] INTERNAL_RULES = {
-            {"POST",  "/api/admin/logs"},            // gateway-core 上报日志
-            {"GET",   "/api/admin/keys/validate"},   // gateway-core 验证 API Key
-            {"POST",  "/api/admin/keys/"},           // gateway-core 扣减配额（/keys/{id}/deduct-quota）
-            // 注意：/{keyId}/chat 和 /{keyId}/test 走 JWT 认证，不在此列
-            {"GET",   "/api/admin/models"},          // gateway-core 获取模型列表
-            {"GET",   "/api/admin/channels/internal"}, // gateway-core 拉取启用渠道列表
+            {"POST", "/api/admin/logs"},                               // gateway-core 上报日志
+            {"GET",  "/api/admin/keys/validate"},                      // gateway-core 验证 API Key
+            {"POST", "/api/admin/keys/", "/deduct-quota"},            // gateway-core 扣减配额
+            {"GET",  "/api/admin/models"},                             // gateway-core 获取模型列表
+            {"GET",  "/api/admin/channels/internal"},                  // gateway-core 拉取启用渠道列表
     };
 
     @Override
@@ -70,9 +69,11 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        // 1. 内部接口：匹配 method + path，校验 X-Internal-Secret
+        // 1. 内部接口：匹配 method + pathPrefix [+ suffix]，校验 X-Internal-Secret
         for (String[] rule : INTERNAL_RULES) {
-            if (rule[0].equals(method) && path.startsWith(rule[1])) {
+            boolean pathMatches = path.startsWith(rule[1])
+                    && (rule.length < 3 || path.contains(rule[2]));
+            if (rule[0].equals(method) && pathMatches) {
                 String secret = request.getHeader("X-Internal-Secret");
                 if (internalSecret != null && !internalSecret.isBlank() && internalSecret.equals(secret)) {
                     return true; // 合法内部调用，放行

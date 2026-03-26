@@ -32,6 +32,8 @@ spring:
 # Internal secret for gateway-core -> admin calls
 admin:
   internal-secret: ${ADMIN_INTERNAL_SECRET:dev-internal-secret-change-in-prod}
+  cors:
+    allowed-origins: ${ADMIN_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:5173}
 
 # JWT
 jwt:
