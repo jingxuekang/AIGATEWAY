@@ -209,6 +209,13 @@ public class ChatService {
         long startTime = System.currentTimeMillis();
         String requestId = UUID.randomUUID().toString();
 
+        // 1. 提示词注入检测
+        promptGuardService.check(request);
+
+        // 2. 模型权限检查
+        checkModelPermission(request.getModel());
+
+        // 3. 预算检查
         String apiKeyId = getApiKeyId();
         budgetGuardService.checkBudget(apiKeyId, request.getModel());
 

@@ -41,9 +41,16 @@ public class SpringAiResponseConverter {
                 ChatResponse.Choice choice = new ChatResponse.Choice();
                 choice.setIndex(i);
                 choice.setMessage(msg);
+                // Spring AI 1.0.4: finishReason 通过 getFinishReason() 获取
                 if (gen.getMetadata() != null) {
-                    Object finishReason = gen.getMetadata().get("finishReason");
-                    if (finishReason != null) choice.setFinishReason(finishReason.toString());
+                    try {
+                        Object fr = gen.getMetadata().getFinishReason();
+                        if (fr != null) choice.setFinishReason(fr.toString().toLowerCase());
+                    } catch (Exception ex) {
+                        // fallback: try generic metadata map
+                        Object fr = gen.getMetadata().get("finishReason");
+                        if (fr != null) choice.setFinishReason(fr.toString());
+                    }
                 }
                 choices.add(choice);
             }

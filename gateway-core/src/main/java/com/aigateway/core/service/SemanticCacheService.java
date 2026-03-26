@@ -31,6 +31,8 @@ public class SemanticCacheService {
     public ChatResponse get(ChatRequest request) {
         if (!cacheEnabled) return null;
         if (Boolean.TRUE.equals(request.getStream())) return null;
+        // 多模态请求（content 含图片）不走缓存
+        if (isMultiModal(request)) return null;
         String key = buildCacheKey(request);
         CacheEntry entry = cache.get(key);
         if (entry == null) return null;
@@ -45,6 +47,8 @@ public class SemanticCacheService {
     public void put(ChatRequest request, ChatResponse response) {
         if (!cacheEnabled || response == null) return;
         if (Boolean.TRUE.equals(request.getStream())) return;
+        // 多模态请求不缓存
+        if (isMultiModal(request)) return;
         if (cache.size() >= maxSize) evict();
         String key = buildCacheKey(request);
         long expireAt = System.currentTimeMillis() + ttlSeconds * 1000;
@@ -90,6 +94,14 @@ public class SemanticCacheService {
         } catch (NoSuchAlgorithmException e) {
             return String.valueOf(Math.abs(input.hashCode()));
         }
+    }
+
+    private boolean isMultiModal(ChatRequest request) {
+        if (request.getMessages() == null) return false;
+        for (ChatRequest.Message msg : request.getMessages()) {
+            if (msg.getContent() instanceof java.util.List) return true;
+        }
+        return false;
     }
 
     private void evict() {
