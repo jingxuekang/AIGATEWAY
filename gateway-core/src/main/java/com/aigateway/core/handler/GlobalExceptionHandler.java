@@ -2,6 +2,7 @@ package com.aigateway.core.handler;
 
 import com.aigateway.common.exception.BusinessException;
 import com.aigateway.common.result.Result;
+import com.aigateway.common.util.TraceIdUtil;
 import com.aigateway.provider.adapter.ProviderException;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.ratelimiter.RequestNotPermitted;
@@ -36,16 +37,50 @@ public class GlobalExceptionHandler {
 
     /**
      * Provider 异常 — 上游 API 调用失败
+     * 原始上游错误只记录日志，不直接暴露给客户端
      */
     @ExceptionHandler(ProviderException.class)
     public ResponseEntity<Result<Void>> handleProviderException(ProviderException e) {
         log.error("[Provider] errorCode={}, message={}", e.getErrorCode(), e.getMessage());
         if ("CIRCUIT_BREAKER_OPEN".equals(e.getErrorCode())) {
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                .body(Result.error(503, e.getMessage()));
+                .body(Result.error(503, "Service temporarily unavailable. The upstream provider is currently unavailable, please retry after 30 seconds."));
+        }
+        // 解析上游 HTTP 状态码，给出更具体的用户提示
+        String msg = e.getMessage();
+        if (msg != null) {
+            if (msg.contains("401") || msg.contains("Unauthorized") || msg.contains("authentication")) {
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(Result.error(502, "Upstream authentication failed. Please check the channel API key configuration."));
+            }
+            if (msg.contains("403") || msg.contains("Forbidden") || msg.contains("permission")) {
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(Result.error(502, "Upstream access denied. The API key may not have permission for this model."));
+            }
+            if (msg.contains("404")) {
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(Result.error(502, "Upstream resource not found. Please check the channel baseUrl and deployment configuration."));
+            }
+            if (msg.contains("429") || msg.contains("rate limit") || msg.contains("RateLimitError")) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", "60")
+                    .body(Result.error(429, "Upstream rate limit exceeded. Please retry after a moment."));
+            }
+            if (msg.contains("context length") || msg.contains("maximum context") || msg.contains("1210")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Result.error(400, "Request exceeds the model's maximum context length. Please reduce the number of messages or message length."));
+            }
+            if (msg.contains("timeout") || msg.contains("timed out")) {
+                return ResponseEntity.status(HttpStatus.GATEWAY_TIMEOUT)
+                    .body(Result.error(504, "Upstream request timed out. Please retry."));
+            }
+            if (msg.contains("502") || msg.contains("Bad Gateway")) {
+                return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(Result.error(502, "Upstream gateway error. Please retry."));
+            }
         }
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-            .body(Result.error(502, "Upstream provider error: " + e.getMessage()));
+            .body(Result.error(502, "Upstream provider call failed. Please retry or contact support."));
     }
 
     /**
@@ -99,11 +134,12 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 兜底异常处理
+     * 兜底异常处理 — 带 TraceId 方便定位
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<?> handleException(Exception e, HttpServletRequest request) {
-        log.error("[Unexpected] {}", e.getMessage(), e);
+        String traceId = TraceIdUtil.getTraceId();
+        log.error("[Unexpected] traceId={}, {}", traceId, e.getMessage(), e);
         String accept = request != null ? request.getHeader("Accept") : null;
         if (accept != null && accept.contains("application/openmetrics-text")) {
             // prometheus/openmetrics 场景返回空 body，避免 JSON converter 冲突
@@ -111,8 +147,11 @@ public class GlobalExceptionHandler {
                     .contentType(MediaType.TEXT_PLAIN)
                     .build();
         }
+        String msg = traceId != null
+                ? "Internal server error. TraceId: " + traceId
+                : "Internal server error.";
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .body(Result.error(500, "Internal server error."));
+            .body(Result.error(500, msg));
     }
 
     private HttpStatus resolveHttpStatus(Integer code) {

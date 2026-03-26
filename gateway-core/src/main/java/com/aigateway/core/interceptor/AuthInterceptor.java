@@ -96,8 +96,14 @@ public class AuthInterceptor implements HandlerInterceptor {
     private void sendUnauthorized(HttpServletResponse response, String message) throws Exception {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType("application/json;charset=UTF-8");
+        // 对 message 转义，避免特殊字符破坏 JSON 格式
+        String safeMessage = message
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
         response.getWriter().write(
-                "{\"code\":401,\"message\":\"" + message + "\",\"data\":null}"
+                "{\"code\":401,\"message\":\"" + safeMessage + "\",\"data\":null}"
         );
     }
 }
