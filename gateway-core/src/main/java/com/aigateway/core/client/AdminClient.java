@@ -92,7 +92,7 @@ public class AdminClient {
     /**
      * 验证 API Key（带本地缓存）
      * 缓存命中直接返回，减少 admin 服务调用次数。
-     * 缓存仅存储验证成功的结果，失败（null）不缓存，避免短期内封禁已撤销 Key。
+     * admin 不可用时返回过期缓存（stale cache），避免 admin 短暂故障时所有请求失败。
      */
     public ApiKeyInfo validateApiKey(String apiKey) {
         // 先查本地缓存
@@ -127,7 +127,16 @@ public class AdminClient {
             return info;
 
         } catch (Exception e) {
-            log.error("[AdminClient] Validate API Key failed", e);
+            log.error("[AdminClient] Validate API Key failed, trying stale cache", e);
+            // admin 不可用时：尝试直接从 Caffeine 底层获取过期缓存（stale），
+            // 避免 admin 短暂故障导致所有 in-flight 请求全部 401
+            // Caffeine expireAfterWrite 过期后 getIfPresent 返回 null，
+            // 这里用 asMap().get() 绕过过期检查读取过期值
+            ApiKeyInfo stale = apiKeyCache().asMap().get(apiKey);
+            if (stale != null) {
+                log.warn("[AdminClient] Using stale cache for API Key: keyId={}", stale.getId());
+                return stale;
+            }
             return null;
         }
     }

@@ -39,14 +39,14 @@ public class BudgetGuardService {
             throw new BusinessException(429, "Global daily token budget exhausted.");
         }
         if (apiKeyId != null && perKeyDailyTokenLimit > 0) {
-            long used = keyDailyUsed.getOrDefault(apiKeyId, new AtomicLong(0)).get();
+            long used = keyDailyUsed.computeIfAbsent(apiKeyId, k -> new AtomicLong(0)).get();
             if (used >= perKeyDailyTokenLimit) {
                 log.warn("[Budget] Per-key limit exceeded: keyId={}, used={}", apiKeyId, used);
                 throw new BusinessException(429, "Daily token budget exhausted for this API key.");
             }
         }
         if (model != null && perModelDailyTokenLimit > 0) {
-            long used = modelDailyUsed.getOrDefault(model, new AtomicLong(0)).get();
+            long used = modelDailyUsed.computeIfAbsent(model, k -> new AtomicLong(0)).get();
             if (used >= perModelDailyTokenLimit) {
                 log.warn("[Budget] Per-model limit exceeded: model={}, used={}", model, used);
                 throw new BusinessException(429, "Daily token budget exhausted for model: " + model);
@@ -88,6 +88,7 @@ public class BudgetGuardService {
     }
 
     private long currentDay() {
-        return System.currentTimeMillis() / 86400000L;
+        // 使用系统默认时区（北京时间）计算当天，避免 UTC 00:00 触发重置
+        return java.time.LocalDate.now(java.time.ZoneId.systemDefault()).toEpochDay();
     }
 }
