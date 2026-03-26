@@ -17,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.reactive.function.client.WebClient;
-
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -257,8 +257,22 @@ public class ApiKeyController {
             @SuppressWarnings("unchecked")
             Map<String, Object> respMap = new com.fasterxml.jackson.databind.ObjectMapper().readValue(resp, Map.class);
             return Result.success(respMap);
+        } catch (WebClientResponseException e) {
+            // 解析 gateway-core 返回的错误信息，避免暴露内部 URL
+            String respBody = e.getResponseBodyAsString();
+            String userMsg;
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> errMap = new com.fasterxml.jackson.databind.ObjectMapper()
+                        .readValue(respBody, Map.class);
+                Object msg = errMap.get("message");
+                userMsg = msg != null ? msg.toString() : respBody;
+            } catch (Exception parseEx) {
+                userMsg = respBody != null && !respBody.isBlank() ? respBody : "Request failed";
+            }
+            throw new BusinessException(e.getStatusCode().value(), userMsg);
         } catch (Exception e) {
-            throw new BusinessException(502, "Gateway call failed: " + e.getMessage());
+            throw new BusinessException(502, "Chat request failed, please retry.");
         }
     }
 
