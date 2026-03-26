@@ -29,12 +29,25 @@ request.interceptors.response.use(
   },
   (error) => {
     if (error.response?.status === 401) {
-      // token 失效，清除本地存储并跳转登录页
-      localStorage.removeItem('token')
-      localStorage.removeItem('userId')
-      localStorage.removeItem('username')
-      localStorage.removeItem('role')
-      window.location.href = '/login'
+      const errMsg = error.response?.data?.message || 'Authentication failed'
+      // API Key 过期/配额耗尽等业务 401，提示后不跳登录
+      const isApiKeyError = errMsg.includes('expired') ||
+          errMsg.includes('quota') ||
+          errMsg.includes('API Key') ||
+          errMsg.includes('Invalid or disabled')
+      if (isApiKeyError) {
+        message.error(errMsg, 5)
+      } else {
+        // JWT 失效等认证 401，提示后跳登录
+        message.error(errMsg || '登录已过期，请重新登录', 3)
+        setTimeout(() => {
+          localStorage.removeItem('token')
+          localStorage.removeItem('userId')
+          localStorage.removeItem('username')
+          localStorage.removeItem('role')
+          window.location.href = '/login'
+        }, 1500)
+      }
       return Promise.reject(error)
     }
     message.error(error.response?.data?.message || error.message || '网络错误')
@@ -71,8 +84,18 @@ chatRequest.interceptors.response.use(
     }
   },
   (error) => {
-    message.error(error.message || '网络错误')
-    return Promise.reject(error)
+    const errMsg = error.response?.data?.message || error.message || '网络错误'
+    if (error.response?.status === 401) {
+      // Gateway Key 鉴权失败，直接展示具体原因，不跳登录
+      message.error(errMsg, 5)
+    } else if (error.response?.status === 429) {
+      message.error(errMsg || '请求过于频繁，请稍后再试', 5)
+    } else if (error.response?.status === 502 || error.response?.status === 504) {
+      message.error(errMsg || '上游服务暂时不可用，请稍后重试', 5)
+    } else {
+      message.error(errMsg)
+    }
+    return Promise.reject(new Error(errMsg))
   }
 )
 
