@@ -43,7 +43,7 @@ public class SmartRoutingService {
     public void updateDynamicProviders(List<ModelProvider> newProviders) {
         dynamicProviders.clear();
         dynamicProviders.addAll(newProviders);
-        log.info("[Router] Dynamic providers updated: count={}", newProviders.size());
+        log.debug("[Router] Dynamic providers updated: count={}", newProviders.size());
     }
 
     public ModelProvider selectProvider(String model) {

@@ -109,8 +109,13 @@ public class ChannelProviderRegistry {
             });
 
             smartRoutingService.updateDynamicProviders(providers);
-            log.info("[ChannelRegistry] Refreshed: total={}, added={}, reused={}, removed={}",
-                    providers.size(), added, reused, removedIds.size());
+            if (added > 0 || !removedIds.isEmpty()) {
+                log.info("[ChannelRegistry] Refreshed: total={}, added={}, reused={}, removed={}",
+                        providers.size(), added, reused, removedIds.size());
+            } else {
+                log.debug("[ChannelRegistry] Refreshed: total={}, added={}, reused={}, removed={}",
+                        providers.size(), added, reused, removedIds.size());
+            }
 
         } catch (Exception e) {
             consecutiveAdminFailures++;
