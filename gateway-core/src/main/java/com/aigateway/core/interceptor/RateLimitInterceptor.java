@@ -112,7 +112,12 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         response.setStatus(429);
         response.setContentType("application/json;charset=UTF-8");
         response.setHeader("Retry-After", "60");
+        String safeMessage = message
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
         response.getWriter().write(
-            "{\"code\":429,\"message\":\"" + message + "\",\"data\":null}");
+            "{\"code\":429,\"message\":\"" + safeMessage + "\",\"data\":null}");
     }
 }
