@@ -9,14 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 渠道 Provider 注册表
  * 启动时 + 每 30 秒从 admin 拉取启用的渠道，动态注册/注销 Provider。
- * SmartRoutingService 持有的是同一个 List 引用（CopyOnWriteArrayList），更新后立即生效。
+ * 采用差量更新：按 channelId 缓存已有 Provider，避免每次全量重建 HTTP 连接池。
  */
 @Slf4j
 @Service
@@ -28,9 +27,12 @@ public class ChannelProviderRegistry {
     private final ProviderFactory providerFactory;
 
     /**
-     * admin 调用失败退避：避免每 30 秒都撞超时/失败，减少日志噪音和无效刷新。
-     * - refresh() 里如果还在 cooldown 内，直接 return
-     * - 连续失败次数越多，cooldown 越长（指数退避，带上限）
+     * channelId -> ModelProvider 缓存，避免重复构建 Spring AI ChatModel（含连接池）
+     */
+    private final ConcurrentHashMap<Long, ModelProvider> providerCache = new ConcurrentHashMap<>();
+
+    /**
+     * admin 调用失败退避：连续失败次数越多，cooldown 越长（指数退避，上限 5 分钟）
      */
     private volatile long cooldownUntilMs = 0L;
     private volatile int consecutiveAdminFailures = 0;
@@ -50,39 +52,76 @@ public class ChannelProviderRegistry {
         try {
             List<Map<String, Object>> channels = adminClient.listEnabledChannels();
             if (channels == null) {
-                // admin 暂时不可用（超时/网络抖动）时保留旧 provider，避免把路由清空
                 log.warn("[ChannelRegistry] Refresh skipped due to admin call failure; keeping previous providers");
                 consecutiveAdminFailures++;
                 cooldownUntilMs = now + calcCooldownMs(consecutiveAdminFailures);
-                return;
-            }
-            if (channels.isEmpty()) {
-                log.debug("[ChannelRegistry] No enabled channels from admin");
-                consecutiveAdminFailures = 0;
-                cooldownUntilMs = 0L;
-                smartRoutingService.updateDynamicProviders(List.of());
                 return;
             }
 
             consecutiveAdminFailures = 0;
             cooldownUntilMs = 0L;
 
+            if (channels.isEmpty()) {
+                log.debug("[ChannelRegistry] No enabled channels from admin");
+                providerCache.clear();
+                smartRoutingService.updateDynamicProviders(List.of());
+                return;
+            }
+
+            // 本次启用的 channelId 集合
+            Set<Long> activeIds = new HashSet<>();
+            int added = 0, reused = 0;
+
             List<ModelProvider> providers = new ArrayList<>();
             for (Map<String, Object> ch : channels) {
-                try {
-                    // 使用 ProviderFactory 按协议类型创建对应实现，不再直接 new DynamicChannelProvider
-                    providers.add(providerFactory.create(ch));
-                } catch (Exception e) {
-                    log.warn("[ChannelRegistry] Failed to create provider for channel: {}", ch.get("name"), e);
+                Long channelId = toLong(ch.get("id"));
+                if (channelId == null || channelId == 0L) continue;
+                activeIds.add(channelId);
+
+                // 差量：已有 Provider 直接复用，不重建
+                ModelProvider existing = providerCache.get(channelId);
+                if (existing != null) {
+                    providers.add(existing);
+                    reused++;
+                } else {
+                    try {
+                        ModelProvider p = providerFactory.create(ch);
+                        providerCache.put(channelId, p);
+                        providers.add(p);
+                        added++;
+                        log.info("[ChannelRegistry] Added new provider: channelId={}, name={}",
+                                channelId, ch.get("name"));
+                    } catch (Exception e) {
+                        log.warn("[ChannelRegistry] Failed to create provider for channel: {}", ch.get("name"), e);
+                    }
                 }
             }
+
+            // 移除已删除/禁用的渠道
+            Set<Long> removedIds = new HashSet<>(providerCache.keySet());
+            removedIds.removeAll(activeIds);
+            removedIds.forEach(id -> {
+                ModelProvider removed = providerCache.remove(id);
+                if (removed != null) {
+                    log.info("[ChannelRegistry] Removed provider: channelId={}, name={}",
+                            id, removed.getProviderName());
+                }
+            });
+
             smartRoutingService.updateDynamicProviders(providers);
-            log.info("[ChannelRegistry] Refreshed {} dynamic channel providers", providers.size());
+            log.info("[ChannelRegistry] Refreshed: total={}, added={}, reused={}, removed={}",
+                    providers.size(), added, reused, removedIds.size());
+
         } catch (Exception e) {
             consecutiveAdminFailures++;
-            cooldownUntilMs = now + calcCooldownMs(consecutiveAdminFailures);
+            cooldownUntilMs = System.currentTimeMillis() + calcCooldownMs(consecutiveAdminFailures);
             log.error("[ChannelRegistry] Refresh failed (cooldown applied)", e);
         }
+    }
+
+    private static Long toLong(Object o) {
+        if (o == null) return null;
+        try { return Long.parseLong(o.toString()); } catch (Exception e) { return null; }
     }
 
     private static long calcCooldownMs(int consecutiveFailures) {

@@ -87,7 +87,7 @@ public class SmartRoutingService {
     private ModelProvider weightedSelect(List<ModelProvider> candidates) {
         int totalWeight = candidates.stream().mapToInt(ModelProvider::getWeight).sum();
         if (totalWeight <= 0) return candidates.get(0);
-        int rand = (int) (Math.random() * totalWeight);
+        int rand = java.util.concurrent.ThreadLocalRandom.current().nextInt(totalWeight);
         int acc = 0;
         for (ModelProvider p : candidates) {
             acc += p.getWeight();
